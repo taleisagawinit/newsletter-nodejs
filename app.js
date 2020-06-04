@@ -7,9 +7,10 @@ app.use(bodyParser.urlencoded({
   extended: true
 }));
 
+// tell express to use files in the public folder when it needs to use static files like images or css
 app.use(express.static("public"));
 
-// load the form on
+// load the homepage and form to sign up
 app.get("/", function(req, res) {
   res.sendFile(__dirname + "/signup.html")
 })
@@ -19,6 +20,8 @@ app.post("/", function(req, res) {
   const fname = req.body.fname;
   const lname = req.body.lname;
   const email = req.body.email;
+
+  // create data object that will be sent to mailchimp
   const data = {
     members: [{
       email_address: email,
@@ -30,39 +33,43 @@ app.post("/", function(req, res) {
     }]
   }
   const jsonData = JSON.stringify(data);
+
+  // add api key to http request and specify post method
+  const apiKey = process.env.MY_MAILCHIMP_API_KEY;
   const options = {
-    auth: "taleipono:c3b5f5548c4819936859e79ce26a2543-us10",
+    auth: "taleipono:" + apiKey,
     method: "POST",
   };
-  const list_id = "e368c9d2dd";
+
+  // create the url that the request will be sent to
+  const list_id = process.env.MY_MAILCHIMP_LIST_ID;
   const url = "https://us10.api.mailchimp.com/3.0/lists/" + list_id;
 
+
+  // create http request
   const request = https.request(url, options, function(response) {
 
     const status = response.statusCode;
 
-    // send a success or error message
+    // send a success or error message based on the response status
     if (status === 200) {
       res.sendFile(__dirname + "/success.html");
     } else {
       res.sendFile(__dirname + "/failure.html");
     }
 
-    response.on("data", function(data) {
-      // console.log(JSON.parse(data));
-    })
   });
 
+  // send data through http request
   request.write(jsonData);
   request.end();
-  // res.send("Thanks for the info!")
 })
 
-// redirect user to form if there was an error
+// redirect user back to homepage if there was an error
 app.get("/failure", function(req, res) {
   res.redirect("/");
 })
 
-app.listen(3000, function() {
+app.listen(process.env.PORT || 3000, function() {
   console.log("Server is listening on port 3000");
 })
